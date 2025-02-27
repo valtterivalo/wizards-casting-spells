@@ -390,872 +390,137 @@ def draw_spell_circle(screen, spell_circle):
 
 def draw_spell_effect(screen, spell_circle):
     """
-    Draw the effect of an active spell.
+    Draw any active spell effects on the screen.
     
     Args:
-        screen: Pygame surface to draw on
-        spell_circle: SpellCircle object containing active spell info
+        screen (pygame.Surface): The screen to draw on
+        spell_circle (SpellCircle): The spell circle to get effect information from
     """
-    if not spell_circle.active_spell:
-        return
-    
-    # Different effects for different spells
-    spell = spell_circle.active_spell
-    spell_power = getattr(spell_circle, 'active_spell_power', 100)  # Default to 100 if not available
-    screen_width, screen_height = screen.get_width(), screen.get_height()
-    
-    # Create a transparent surface for the effect
-    effect_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-    
-    # Scale effects based on power level
-    alpha = int(min(180, 100 + spell_power / 2))  # 100-180 based on power
-    size_scale = 0.5 + (spell_power / 100)  # 0.5-1.5 based on power
-    
-    # Spell color schemes
-    spell_colors = {
-        "Steam": {"primary": (100, 150, 255, alpha), "secondary": (200, 230, 255, alpha)},
-        "Lava": {"primary": (255, 100, 0, alpha), "secondary": (255, 200, 0, alpha)},
-        "Mud": {"primary": (139, 69, 19, alpha), "secondary": (160, 100, 50, alpha)},
-        "Storm": {"primary": (100, 100, 255, alpha), "secondary": (255, 255, 255, alpha)},
-        # New Air element combinations
-        "Breeze": {"primary": (180, 180, 255, alpha), "secondary": (220, 220, 255, alpha)},
-        "Sandstorm": {"primary": (180, 160, 100, alpha), "secondary": (210, 190, 130, alpha)},
-        "Typhoon": {"primary": (70, 130, 200, alpha), "secondary": (150, 210, 255, alpha)},
-        # Multi-cast spells
-        "Fireball": {"primary": (255, 50, 0, alpha), "secondary": (255, 180, 0, alpha)},
-        "Tidal Wave": {"primary": (0, 50, 200, alpha), "secondary": (100, 150, 255, alpha)},
-        "Earthquake": {"primary": (100, 80, 0, alpha), "secondary": (150, 120, 40, alpha)},
-        "Tornado": {"primary": (150, 150, 200, alpha), "secondary": (200, 200, 240, alpha)},
-        # Three-element combinations
-        "Inferno": {"primary": (255, 0, 0, alpha), "secondary": (255, 255, 0, alpha)},
-        "Tsunami": {"primary": (0, 0, 180, alpha), "secondary": (100, 100, 255, alpha)},
-        "Volcano": {"primary": (200, 0, 0, alpha), "secondary": (150, 75, 0, alpha)},
-        # Ultimate spell
-        "Cataclysm": {"primary": (100, 0, 100, alpha), "secondary": (255, 255, 255, alpha)},
-        # New special effect spells
-        "Teleport": {"primary": (255, 255, 255, alpha), "secondary": (180, 100, 255, alpha)},
-        "Barrier": {"primary": (0, 150, 180, alpha), "secondary": (100, 255, 255, alpha)}
-    }
-    
-    # Get colors for this spell
-    colors = spell_colors.get(spell, {"primary": (200, 200, 200, alpha), "secondary": (255, 255, 255, alpha)})
-    
-    if spell == "Steam":
-        # Steam creates a light blue haze - more intense with higher power
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
+    if spell_circle.active_spell:
+        # Get the spell name and target position
+        spell_name = spell_circle.active_spell
+        spell_power = spell_circle.active_spell_power
+        target_pos = spell_circle.target_position
         
-        # Add some steam particles
-        num_particles = int(15 * size_scale)
-        for i in range(num_particles):
-            particle_x = (pygame.time.get_ticks() // (i+5)) % screen_width
-            particle_y = (pygame.time.get_ticks() // (i+3)) % screen_height
-            particle_size = int(8 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (particle_x, particle_y), particle_size)
-        
-    elif spell == "Lava":
-        # Lava creates an orange-red glow - more intense with higher power
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Add lava bubbles for high-power casts
-        if spell_power > 50:
-            num_bubbles = int(12 * size_scale)
-            for i in range(num_bubbles):
-                bubble_x = (pygame.time.get_ticks() // (i+1)) % screen_width
-                bubble_y = screen_height - ((pygame.time.get_ticks() // (i+2)) % 200)
-                bubble_size = int(12 * size_scale)
-                pygame.draw.circle(effect_surface, colors["secondary"], (bubble_x, bubble_y), bubble_size)
-        
-    elif spell == "Mud":
-        # Mud creates a brown effect at the bottom - taller with higher power
-        mud_height = int((screen_height // 3) * size_scale)
-        pygame.draw.rect(effect_surface, colors["primary"], (0, screen_height - mud_height, screen_width, mud_height))
-        
-        # Add mud splatters for high-power casts
-        if spell_power > 60:
-            num_splatters = int(10 * size_scale)
-            for i in range(num_splatters):
-                splatter_x = (pygame.time.get_ticks() // (i+3)) % screen_width
-                splatter_y = screen_height - mud_height - ((pygame.time.get_ticks() // (i+2)) % 120)
-                splatter_size = int(10 * size_scale)
-                pygame.draw.circle(effect_surface, colors["secondary"], (splatter_x, splatter_y), splatter_size)
-        
-    elif spell == "Storm":
-        # Create a slight blue overlay for storm atmosphere
-        pygame.draw.rect(effect_surface, (0, 0, 50, alpha // 3), (0, 0, screen_width, screen_height))
-        
-        # Storm creates lightning-like effects - more bolts and brighter with higher power
-        num_bolts = int(3 + (spell_power / 20))  # 3-8 bolts based on power
-        bolt_width = int(2 + (spell_power / 30))  # 2-5 pixels based on power
-        
-        for i in range(num_bolts):
-            # Make timing more random
-            time_offset = (pygame.time.get_ticks() + i * 121) % screen_width
-            start_x = time_offset
-            # Lightning effect gets more jagged with higher power
-            zigzags = int(4 + (spell_power / 25))  # 4-8 zigzags
-            last_x, last_y = start_x, 0
+        # Calculate the radius of the spell effect based on spell type and power
+        radius = 0
+        if spell_name in ['Lava', 'Steam', 'Mud']:
+            radius = 100 * (0.5 + spell_power / 100)
+        elif spell_name == 'Storm':
+            radius = 200 * (0.5 + spell_power / 100)
+        elif spell_name == 'Fireball':
+            radius = 150 * (0.5 + spell_power / 100)
+        elif spell_name == 'Teleport':
+            radius = 40 * (0.5 + spell_power / 100)
+        elif spell_name == 'Barrier':
+            radius = 60 * (0.5 + spell_power / 100)
             
-            # Generate points for the lightning bolt
-            points = [(last_x, last_y)]
-            for j in range(zigzags):
-                next_y = int((j+1) * (screen_height / zigzags))
-                next_x = last_x + int(((pygame.time.get_ticks() + i*37) // (j+10)) % int(120 * size_scale) - 60 * size_scale)
-                points.append((next_x, next_y))
-                last_x, last_y = next_x, next_y
-            
-            # Draw the main bolt
-            pygame.draw.lines(effect_surface, colors["secondary"], False, points, bolt_width)
-            
-            # Draw a thinner "glow" around the bolt for effect
-            glow_color = (colors["secondary"][0], colors["secondary"][1], colors["secondary"][2], colors["secondary"][3] // 2)
-            pygame.draw.lines(effect_surface, glow_color, False, points, bolt_width + 3)
-    
-    elif spell == "Breeze":
-        # Breeze creates gentle wind-like effects
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
+        # Draw a semi-transparent circle to represent the area of effect
+        aoe_surface = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
         
-        # Add flowing air particles
-        num_particles = int(20 * size_scale)
-        for i in range(num_particles):
-            wave_y = int(screen_height/2 + math.sin((pygame.time.get_ticks() + i*100)/200) * 50)
-            particle_x = (pygame.time.get_ticks() // (7-i%7)) % screen_width
-            particle_size = int(5 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (particle_x, wave_y), particle_size)
-            # Draw trail
-            for j in range(3):
-                trail_x = (particle_x - (j+1)*15) % screen_width
-                trail_size = particle_size - j
-                if trail_size > 0:
-                    trail_alpha = alpha - j*40
-                    if trail_alpha > 0:
-                        trail_color = (colors["secondary"][0], colors["secondary"][1], colors["secondary"][2], trail_alpha)
-                        pygame.draw.circle(effect_surface, trail_color, (trail_x, wave_y), trail_size)
+        # Different colors for different spell types
+        if 'Fire' in spell_name or 'Lava' in spell_name or spell_name == 'Fireball':
+            color = (255, 100, 0, 100)  # Red-orange with alpha
+        elif 'Water' in spell_name or 'Steam' in spell_name:
+            color = (0, 100, 255, 100)  # Blue with alpha
+        elif 'Earth' in spell_name or 'Mud' in spell_name:
+            color = (139, 69, 19, 100)  # Brown with alpha
+        elif 'Air' in spell_name or spell_name == 'Storm':
+            color = (200, 200, 200, 100)  # Gray with alpha
+        elif spell_name == 'Teleport':
+            color = (255, 255, 0, 100)  # Yellow with alpha
+        elif spell_name == 'Barrier':
+            color = (0, 255, 0, 100)  # Green with alpha
+        else:
+            color = (255, 255, 255, 100)  # White with alpha
+            
+        # Draw the circle
+        pygame.draw.circle(aoe_surface, color, (radius, radius), radius)
+        
+        # Calculate the position to draw the surface
+        pos = (target_pos[0] - radius, target_pos[1] - radius)
+        
+        # Draw the effect
+        screen.blit(aoe_surface, pos)
+        
+        # Draw a pulsing border around the AOE to make it more visible
+        pulse = abs(((pygame.time.get_ticks() % 1000) - 500) / 500)  # 0-1 pulsing value
+        border_color = tuple(c for c in color[:3]) + (int(200 * pulse),)  # Pulsing alpha
+        pygame.draw.circle(aoe_surface, border_color, (radius, radius), radius, 3)
+        screen.blit(aoe_surface, pos)
+        
+        # Draw the spell name above the effect
+        font = pygame.font.SysFont(None, 24)
+        text = font.render(spell_name, True, (255, 255, 255))
+        screen.blit(text, (target_pos[0] - text.get_width()//2, target_pos[1] - radius - 30))
 
-    elif spell == "Sandstorm":
-        # Sandstorm creates swirling sand particles
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Add sand particles
-        num_particles = int(30 * size_scale)
-        for i in range(num_particles):
-            # Swirling pattern
-            angle = (pygame.time.get_ticks()/1000 + i/10) % (2*math.pi)
-            distance = 100 + (i % 5) * 30
-            center_x, center_y = screen_width//2, screen_height//2
-            particle_x = int(center_x + math.cos(angle) * distance)
-            particle_y = int(center_y + math.sin(angle) * distance)
-            particle_size = int(3 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (particle_x, particle_y), particle_size)
-
-    elif spell == "Typhoon":
-        # Typhoon creates a swirling water effect
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Add swirling water effect
-        center_x, center_y = screen_width//2, screen_height//2
-        num_rings = int(5 * size_scale)
-        max_radius = min(screen_width, screen_height) // 2
-        
-        for i in range(num_rings):
-            radius = max_radius * (i+1)/num_rings
-            thickness = int(3 * size_scale)
-            start_angle = (pygame.time.get_ticks()/500 + i/2) % (2*math.pi)
-            end_angle = start_angle + math.pi  # Half circle
-            rect = (center_x - radius, center_y - radius, radius*2, radius*2)
-            pygame.draw.arc(effect_surface, colors["secondary"], rect, start_angle, end_angle, thickness)
-
-    elif spell == "Fireball":
-        # Fireball creates an intense fire with expanding circles
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Center of the fireball effect
-        center_x, center_y = screen_width//2, screen_height//2
-        
-        # Pulsating fireball
-        pulse = (math.sin(pygame.time.get_ticks()/200) + 1) / 2  # 0 to 1
-        radius = int(50 * size_scale * (1 + pulse * 0.3))
-        
-        # Draw multiple layers of the fireball
-        for i in range(5):
-            layer_radius = radius - i*8
-            if layer_radius > 0:
-                color_blend = i/5  # Blend factor between primary and secondary
-                r = int(colors["primary"][0] * (1-color_blend) + colors["secondary"][0] * color_blend)
-                g = int(colors["primary"][1] * (1-color_blend) + colors["secondary"][1] * color_blend)
-                b = int(colors["primary"][2] * (1-color_blend) + colors["secondary"][2] * color_blend)
-                a = alpha
-                pygame.draw.circle(effect_surface, (r, g, b, a), (center_x, center_y), layer_radius)
-        
-        # Add fire sparks
-        num_sparks = int(20 * size_scale)
-        for i in range(num_sparks):
-            angle = (pygame.time.get_ticks()/100 + i*20) % 360
-            distance = radius + (math.sin(pygame.time.get_ticks()/200 + i) + 1) * 20
-            spark_x = center_x + int(math.cos(math.radians(angle)) * distance)
-            spark_y = center_y + int(math.sin(math.radians(angle)) * distance)
-            spark_size = int(3 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (spark_x, spark_y), spark_size)
-
-    elif spell == "Tidal Wave":
-        # Tidal Wave creates a sweeping water effect
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Wave height depends on time
-        wave_height = int(screen_height * 0.4 * size_scale)
-        wave_position = (pygame.time.get_ticks() // 20) % (screen_width * 2)
-        
-        # Draw the wave as a polygon
-        points = [(0, screen_height)]  # Start at bottom left
-        num_points = 20
-        for i in range(num_points + 1):
-            x = screen_width * i / num_points
-            # Create a wave pattern
-            y_offset = math.sin((x + wave_position) / 100) * 20 * size_scale
-            y = screen_height - wave_height + y_offset
-            points.append((x, y))
-        points.append((screen_width, screen_height))  # End at bottom right
-        
-        pygame.draw.polygon(effect_surface, colors["secondary"], points)
-        
-        # Add water droplets above the wave
-        num_droplets = int(15 * size_scale)
-        for i in range(num_droplets):
-            droplet_x = (pygame.time.get_ticks() // (i+5)) % screen_width
-            droplet_y = screen_height - wave_height - ((pygame.time.get_ticks() // (i+3)) % 100)
-            droplet_size = int(4 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (droplet_x, droplet_y), droplet_size)
-
-    elif spell == "Earthquake":
-        # Earthquake creates a shaking effect and cracks in the ground
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Shake effect - offset the drawing slightly
-        shake_amount = int(5 * size_scale)
-        shake_x = (math.sin(pygame.time.get_ticks()/50) * shake_amount)
-        shake_y = (math.cos(pygame.time.get_ticks()/40) * shake_amount)
-        
-        # Ground cracks
-        num_cracks = int(6 * size_scale)
-        ground_y = int(screen_height * 0.7)
-        
-        for i in range(num_cracks):
-            crack_start_x = (screen_width * i / num_cracks) + shake_x
-            crack_points = [(crack_start_x, ground_y + shake_y)]
-            
-            # Create a jagged line for each crack
-            segments = 8
-            for j in range(1, segments + 1):
-                next_x = crack_start_x + (j * 20 * size_scale) * math.sin(j * 0.5 + pygame.time.get_ticks()/500)
-                next_y = ground_y + (j * 20 * size_scale) + shake_y
-                crack_points.append((next_x, next_y))
-            
-            pygame.draw.lines(effect_surface, colors["secondary"], False, crack_points, int(3 * size_scale))
-
-    elif spell == "Tornado":
-        # Tornado creates a spinning funnel
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Tornado funnel
-        center_x = screen_width // 2
-        top_y = int(screen_height * 0.2)
-        bottom_y = screen_height
-        
-        # Draw the tornado as a series of ellipses
-        num_segments = int(12 * size_scale)
-        for i in range(num_segments):
-            segment_y = top_y + (bottom_y - top_y) * i / num_segments
-            # Width increases as we go down
-            width = int(10 * size_scale + (50 * size_scale * i / num_segments))
-            # Add some horizontal movement based on time
-            offset_x = int(math.sin(pygame.time.get_ticks()/200 + i/2) * 10 * size_scale)
-            
-            pygame.draw.ellipse(effect_surface, colors["secondary"], 
-                              (center_x - width/2 + offset_x, segment_y, width, 10))
-        
-        # Add debris particles
-        num_particles = int(25 * size_scale)
-        for i in range(num_particles):
-            # Particles swirl around the tornado
-            angle = (pygame.time.get_ticks()/50 + i*30) % 360
-            height_factor = (i % num_segments) / num_segments
-            y = top_y + (bottom_y - top_y) * height_factor
-            radius = 10 + width * height_factor
-            x = center_x + math.cos(math.radians(angle)) * radius
-            
-            particle_size = int(2 * size_scale)
-            pygame.draw.circle(effect_surface, (220, 220, 220, alpha), (x, y), particle_size)
-
-    elif spell == "Cataclysm":
-        # Cataclysm combines elements of all spells
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Create a pulsating effect
-        pulse = (math.sin(pygame.time.get_ticks()/100) + 1) / 2  # 0 to 1
-        
-        # Draw concentric circles from the center
-        center_x, center_y = screen_width//2, screen_height//2
-        num_circles = int(8 * size_scale)
-        
-        for i in range(num_circles):
-            circle_radius = int((100 + i*30) * size_scale * (0.8 + pulse * 0.4))
-            circle_width = int(5 * size_scale)
-            
-            # Cycle through element colors
-            cycle = (pygame.time.get_ticks()//100 + i*20) % 400
-            if cycle < 100:
-                color = (255, 60, 60, alpha//2)  # Fire
-            elif cycle < 200:
-                color = (60, 60, 255, alpha//2)  # Water
-            elif cycle < 300:
-                color = (60, 255, 60, alpha//2)  # Earth
-            else:
-                color = (200, 200, 255, alpha//2)  # Air
-            
-            pygame.draw.circle(effect_surface, color, (center_x, center_y), circle_radius, circle_width)
-        
-        # Add elemental particles around the screen
-        num_particles = int(40 * size_scale)
-        for i in range(num_particles):
-            # Randomize positions based on time
-            x = (pygame.time.get_ticks() // (i+3)) % screen_width
-            y = (pygame.time.get_ticks() // (i+5)) % screen_height
-            
-            # Vary particle color by position
-            if x < screen_width/2 and y < screen_height/2:
-                color = (255, 60, 60, alpha)  # Fire (top left)
-            elif x >= screen_width/2 and y < screen_height/2:
-                color = (60, 60, 255, alpha)  # Water (top right)
-            elif x < screen_width/2 and y >= screen_height/2:
-                color = (60, 255, 60, alpha)  # Earth (bottom left)
-            else:
-                color = (200, 200, 255, alpha)  # Air (bottom right)
-            
-            particle_size = int(4 * size_scale)
-            pygame.draw.circle(effect_surface, color, (x, y), particle_size)
+def draw_targeting_cursor(screen, position):
+    """
+    Draw a targeting cursor at the mouse position.
     
-    elif spell == "Teleport":
-        # Teleport creates a bright flash and portal-like effect
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Flash effect - increases and decreases based on time
-        flash_time = pygame.time.get_ticks() % 500  # 0-500ms cycle
-        flash_intensity = 0
-        
-        if flash_time < 100:  # Quick flash in the first 100ms
-            flash_intensity = flash_time / 100
-        elif flash_time < 200:  # Fade out in the next 100ms
-            flash_intensity = (200 - flash_time) / 100
-        
-        if flash_intensity > 0:
-            flash_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-            flash_alpha = int(200 * flash_intensity * size_scale)
-            flash_surface.fill((255, 255, 255, flash_alpha))
-            effect_surface.blit(flash_surface, (0, 0))
-        
-        # Portal swirl effect at center of screen
-        center_x, center_y = screen_width//2, screen_height//2
-        radius = int(100 * size_scale)
-        
-        # Draw spiral portal
-        num_spirals = int(12 * size_scale)
-        for i in range(num_spirals):
-            start_angle = (pygame.time.get_ticks()/200 + i*(360/num_spirals)) % 360
-            end_angle = (start_angle + 20) % 360
-            
-            # Convert to radians
-            start_rad = math.radians(start_angle)
-            end_rad = math.radians(end_angle)
-            
-            # Draw arc for spiral
-            rect = (center_x - radius, center_y - radius, radius*2, radius*2)
-            pygame.draw.arc(effect_surface, colors["secondary"], rect, start_rad, end_rad, int(5 * size_scale))
-        
-        # Add particles converging to center
-        num_particles = int(30 * size_scale)
-        for i in range(num_particles):
-            # Particle angle and distance from center
-            angle = (pygame.time.get_ticks()/100 + i*30) % 360
-            angle_rad = math.radians(angle)
-            
-            # Distance pulses in and out
-            base_distance = 200 * size_scale
-            pulse = (math.sin(pygame.time.get_ticks()/200 + i/5) + 1) / 2  # 0-1
-            distance = base_distance * (0.2 + 0.8 * pulse)
-            
-            x = center_x + math.cos(angle_rad) * distance
-            y = center_y + math.sin(angle_rad) * distance
-            
-            # Particle size
-            particle_size = int(3 * size_scale)
-            pygame.draw.circle(effect_surface, colors["secondary"], (x, y), particle_size)
+    Args:
+        screen (pygame.Surface): The screen to draw on
+        position (tuple): The (x, y) position to draw the cursor
+    """
+    # Draw crosshair
+    cursor_size = 20
+    cursor_color = (255, 255, 255)
+    cursor_thickness = 2
     
-    elif spell == "Barrier":
-        # Barrier creates a shimmering shield effect
-        pygame.draw.rect(effect_surface, colors["primary"], (0, 0, screen_width, screen_height))
-        
-        # Find all players and draw shield around them
-        from game import Player  # Import here to avoid circular imports
-        
-        # Get all the players from the game state
-        players = []
-        for obj in globals().values():
-            if isinstance(obj, list):
-                for item in obj:
-                    if isinstance(item, Player):
-                        players.append(item)
-        
-        # Draw shield effect around each player
-        for player in players:
-            # Shield size
-            shield_size = int(100 * size_scale)
-            shield_x = player.position[0] - shield_size//2
-            shield_y = player.position[1] - shield_size//2
-            
-            # Shimmering effect
-            shimmer = (math.sin(pygame.time.get_ticks()/100) + 1) / 2  # 0-1
-            inner_size = shield_size * (0.8 + shimmer * 0.2)
-            inner_x = player.position[0] - inner_size//2
-            inner_y = player.position[1] - inner_size//2
-            
-            # Outer shield
-            pygame.draw.ellipse(effect_surface, colors["primary"], 
-                             (shield_x, shield_y, shield_size, shield_size))
-            
-            # Inner shield with shimmering effect
-            pygame.draw.ellipse(effect_surface, colors["secondary"], 
-                             (inner_x, inner_y, inner_size, inner_size), 
-                             int(3 * size_scale))
-            
-            # Add small particles around the shield
-            num_particles = int(12 * size_scale)
-            for i in range(num_particles):
-                angle = (pygame.time.get_ticks()/200 + i*30) % 360
-                angle_rad = math.radians(angle)
-                
-                # Particles move around the shield
-                x = player.position[0] + math.cos(angle_rad) * shield_size/2
-                y = player.position[1] + math.sin(angle_rad) * shield_size/2
-                
-                particle_size = int(4 * size_scale)
-                pygame.draw.circle(effect_surface, colors["secondary"], (x, y), particle_size)
+    # Draw the crosshair lines
+    pygame.draw.line(screen, cursor_color, 
+                     (position[0] - cursor_size, position[1]),
+                     (position[0] + cursor_size, position[1]), 
+                     cursor_thickness)
+    pygame.draw.line(screen, cursor_color, 
+                     (position[0], position[1] - cursor_size),
+                     (position[0], position[1] + cursor_size), 
+                     cursor_thickness)
     
-    # Blend the effect onto the main screen
-    screen.blit(effect_surface, (0, 0))
-    
-    # Draw spell info in a neat box at the top
-    # Only show if not in main effect area (e.g., avoid mud)
-    info_y = 70  # Position below the objective panel
-    
-    # Create info panel
-    panel_width = 200
-    panel_height = 40
-    panel_x = screen_width // 2 - panel_width // 2
-    
-    info_panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-    pygame.draw.rect(info_panel, (0, 0, 0, 180), (0, 0, panel_width, panel_height), border_radius=10)
-    
-    # Add a slight border glow based on spell type
-    border_color = colors["primary"][:3] + (150,)  # Use the spell's primary color
-    pygame.draw.rect(info_panel, border_color, (0, 0, panel_width, panel_height), width=2, border_radius=10)
-    
-    # Draw spell name and power
-    font = pygame.font.SysFont(None, 28)
-    text = font.render(f"{spell_circle.active_spell}", True, (255, 255, 255))
-    info_panel.blit(text, (panel_width//2 - text.get_width()//2, 8))
-    
-    # Power bar
-    bar_width = 150
-    bar_height = 8
-    bar_x = panel_width//2 - bar_width//2
-    bar_y = 28
-    
-    # Bar background
-    pygame.draw.rect(info_panel, (70, 70, 70), (bar_x, bar_y, bar_width, bar_height), border_radius=4)
-    
-    # Filled portion based on power
-    fill_width = int(bar_width * (spell_power / 100))
-    
-    # Color based on power level
-    if spell_power < 40:
-        power_color = (200, 60, 60)  # Red for low power
-    elif spell_power < 70:
-        power_color = (200, 200, 60)  # Yellow for medium power
-    else:
-        power_color = (60, 200, 60)  # Green for high power
-        
-    pygame.draw.rect(info_panel, power_color, (bar_x, bar_y, fill_width, bar_height), border_radius=4)
-    
-    # Blit the info panel
-    screen.blit(info_panel, (panel_x, info_y))
+    # Draw a small circle in the center
+    pygame.draw.circle(screen, cursor_color, position, 3, 0)
 
 def draw_level(screen, level):
     """
     Draw the level elements such as walls, gaps, enemies, etc.
     
     Args:
-        screen: Pygame surface to draw on
-        level: Level object containing elements to draw
+        screen (pygame.Surface): The screen to draw on
+        level (Level): The level to draw
     """
+    # Draw level elements
     for element in level.elements:
         element_type = element.get('type', 'unknown')
         position = element.get('position', (0, 0))
-        size = element.get('size', (50, 50))
         
-        # Handle different element types
-        if element_type == 'wall':
-            # Walls are solid obstacles
-            pygame.draw.rect(screen, (120, 100, 80), (*position, *size))
-            # Add a subtle 3D effect
-            pygame.draw.rect(screen, (150, 130, 110), (*position, *size), 1)
-            pygame.draw.line(screen, (90, 70, 50), 
-                            (position[0], position[1] + size[1]), 
-                            (position[0] + size[0], position[1] + size[1]), 
-                            2)
-            
-        elif element_type == 'gap':
+        if element_type == 'gap':
             # Gaps are areas that need to be filled
-            # Draw as a darker area with a dashed border
-            pygame.draw.rect(screen, (40, 40, 60), (*position, *size))
+            pygame.draw.rect(screen, (50, 50, 50), pygame.Rect(position[0], position[1], 
+                                                               element['size'][0], element['size'][1]))
             
-            # Draw dashed border (using short lines)
+            # Draw dashed lines around the gap
             dash_length = 5
-            dash_gap = 3
-            x, y = position
-            width, height = size
+            dash_gap = 5
+            gap_rect = pygame.Rect(position[0], position[1], element['size'][0], element['size'][1])
+            draw_dashed_rect(screen, (150, 150, 150), gap_rect, dash_length, dash_gap)
             
-            # Top border
-            for dx in range(0, width, dash_length + dash_gap):
-                dash_end = min(dx + dash_length, width)
-                pygame.draw.line(screen, (180, 180, 200), 
-                                (x + dx, y), 
-                                (x + dash_end, y), 
-                                1)
+        elif element_type == 'wall':
+            # Walls are solid obstacles
+            wall_color = (139, 69, 19)  # Brown for walls
             
-            # Bottom border
-            for dx in range(0, width, dash_length + dash_gap):
-                dash_end = min(dx + dash_length, width)
-                pygame.draw.line(screen, (180, 180, 200), 
-                                (x + dx, y + height), 
-                                (x + dash_end, y + height), 
-                                1)
-            
-            # Left border
-            for dy in range(0, height, dash_length + dash_gap):
-                dash_end = min(dy + dash_length, height)
-                pygame.draw.line(screen, (180, 180, 200), 
-                                (x, y + dy), 
-                                (x, y + dash_end), 
-                                1)
-            
-            # Right border
-            for dy in range(0, height, dash_length + dash_gap):
-                dash_end = min(dy + dash_length, height)
-                pygame.draw.line(screen, (180, 180, 200), 
-                                (x + width, y + dy), 
-                                (x + width, y + dash_end), 
-                                1)
-            
-        elif element_type == 'enemy':
-            # Enemies are represented as threatening shapes
-            x, y = position
-            enemy_color = (200, 60, 60)  # Reddish
-            
-            # If stunned, change the color
-            if element.get('stunned', False):
-                enemy_color = (100, 100, 200)  # Bluish when stunned
-            
-            # Draw enemy body (pentagon)
-            radius = 25
-            points = []
-            for i in range(5):
-                angle = 2 * math.pi * i / 5 - math.pi / 2  # Start from top
-                px = x + radius * math.cos(angle)
-                py = y + radius * math.sin(angle)
-                points.append((px, py))
-            
-            pygame.draw.polygon(screen, enemy_color, points)
-            
-            # Draw health bar
-            health = element.get('health', 100)
-            bar_width = radius * 2
-            bar_height = 5
-            bar_x = x - radius
-            bar_y = y - radius - 10
-            
-            # Background
-            pygame.draw.rect(screen, (70, 70, 70), (bar_x, bar_y, bar_width, bar_height))
-            
-            # Health level
-            health_percentage = max(0, health / 100)
-            health_width = int(bar_width * health_percentage)
-            
-            # Color based on health level
-            if health_percentage < 0.3:
-                health_color = (200, 60, 60)  # Red
-            elif health_percentage < 0.6:
-                health_color = (200, 200, 60)  # Yellow
+            # If it's a temporary wall (barrier), make it translucent green
+            if element.get('temp', False):
+                # Create a semi-transparent surface
+                wall_surface = pygame.Surface((element['size'][0], element['size'][1]), pygame.SRCALPHA)
+                wall_surface.fill((0, 255, 0, 150))  # Semi-transparent green
+                screen.blit(wall_surface, position)
+                
+                # Draw a border
+                pygame.draw.rect(screen, (0, 200, 0), pygame.Rect(position[0], position[1], 
+                                                                 element['size'][0], element['size'][1]), 2)
             else:
-                health_color = (60, 200, 60)  # Green
-                
-            pygame.draw.rect(screen, health_color, (bar_x, bar_y, health_width, bar_height))
-            
-            # Border
-            pygame.draw.rect(screen, (200, 200, 200), (bar_x, bar_y, bar_width, bar_height), 1)
-            
-        elif element_type == 'effect':
-            # Handle different visual effects
-            effect_type = element.get('effect_type', 'generic')
-            position = element.get('position', (0, 0))
-            color = element.get('color', (255, 255, 255))
-            timer = element.get('timer', 0)
-            radius = element.get('radius', 50)
-            
-            # Fade based on timer
-            alpha = int(255 * (timer / 60))  # Fade out as timer goes down
-            
-            if effect_type == 'explosion':
-                # Fireball explosion
-                effect_surface = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-                
-                # Draw gradient explosion
-                for r in range(int(radius), 0, -5):
-                    # Calculate fade-out based on radius
-                    fade = r / radius
-                    r_color = (color[0], color[1], color[2], int(alpha * fade))
-                    
-                    # Draw a circle with this radius and color
-                    pygame.draw.circle(effect_surface, r_color, (radius, radius), r)
-                
-                # Draw some random "sparks"
-                import random
-                for _ in range(20):
-                    # Create a spark at a random angle and distance
-                    angle = random.uniform(0, 2 * math.pi)
-                    distance = random.uniform(0, radius)
-                    
-                    # Convert polar to cartesian coordinates
-                    spark_x = radius + distance * math.cos(angle)
-                    spark_y = radius + distance * math.sin(angle)
-                    
-                    # Random size (bigger near center)
-                    spark_size = int(3 + (radius - distance) / 10)
-                    
-                    # Draw the spark
-                    pygame.draw.circle(effect_surface, 
-                                     (255, 255, 220, alpha), 
-                                     (int(spark_x), int(spark_y)), 
-                                     spark_size)
-                
-                # Blit the effect to the screen
-                screen.blit(effect_surface, 
-                           (position[0] - radius, position[1] - radius), 
-                           special_flags=pygame.BLEND_ALPHA_SDL2)
-            
-            elif effect_type == 'wave':
-                # Tidal Wave expanding ring
-                effect_surface = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-                
-                # Draw concentric rings
-                ring_width = 10
-                for r in range(int(radius), max(0, int(radius) - ring_width*3), -ring_width):
-                    # Calculate alpha for this ring
-                    ring_alpha = int(alpha * (r / radius))
-                    r_color = (color[0], color[1], color[2], ring_alpha)
-                    
-                    # Draw a ring with this radius and color
-                    pygame.draw.circle(effect_surface, r_color, (radius, radius), r, ring_width - 1)
-                
-                # Add wave details (horizontal lines)
-                wavelength = 15
-                wave_amplitude = 3
-                
-                for y in range(0, int(radius*2), wavelength):
-                    # Calculate wave alpha (fade from center)
-                    distance = abs(y - radius) / radius
-                    wave_alpha = int(alpha * (1 - distance))
-                    wave_color = (220, 220, 255, wave_alpha)
-                    
-                    # Draw a wavy line
-                    points = []
-                    for x in range(0, int(radius*2), 5):
-                        # Calculate distance from center
-                        dx = x - radius
-                        dy = y - radius
-                        dist = math.sqrt(dx*dx + dy*dy)
-                        
-                        if dist < radius:
-                            # Calculate wave offset
-                            wave_y = y + wave_amplitude * math.sin(x / 5)
-                            points.append((x, wave_y))
-                    
-                    # Draw the wave line
-                    if len(points) > 1:
-                        pygame.draw.lines(effect_surface, wave_color, False, points, 2)
-                
-                # Blit the effect to the screen
-                screen.blit(effect_surface, 
-                           (position[0] - radius, position[1] - radius), 
-                           special_flags=pygame.BLEND_ALPHA_SDL2)
-            
-            elif effect_type == 'earthquake':
-                # Earthquake effect (cracks in the ground)
-                effect_surface = pygame.Surface((800, 600), pygame.SRCALPHA)
-                
-                # Draw cracks radiating from center
-                import random
-                center_x, center_y = position
-                
-                # Number of cracks based on timer
-                num_cracks = 20 
-                
-                for _ in range(num_cracks):
-                    # Starting angle
-                    angle = random.uniform(0, 2 * math.pi)
-                    
-                    # Create a random jagged line
-                    points = [(center_x, center_y)]
-                    
-                    # Line length based on timer
-                    line_length = random.uniform(50, 150) * (timer / 90)
-                    segments = 8
-                    
-                    for i in range(1, segments+1):
-                        # Each segment deviates slightly from the main angle
-                        segment_angle = angle + random.uniform(-0.5, 0.5)
-                        
-                        # Distance for this segment
-                        distance = line_length * (i / segments)
-                        
-                        # Calculate end point
-                        end_x = center_x + distance * math.cos(segment_angle)
-                        end_y = center_y + distance * math.sin(segment_angle)
-                        
-                        # Add to points list
-                        points.append((end_x, end_y))
-                    
-                    # Calculate alpha based on timer
-                    crack_alpha = int(alpha * random.uniform(0.7, 1.0))
-                    crack_color = (color[0], color[1], color[2], crack_alpha)
-                    
-                    # Draw the crack
-                    pygame.draw.lines(effect_surface, crack_color, False, points, 
-                                     random.randint(1, 3))
-                
-                # Blit the effect to the screen
-                screen.blit(effect_surface, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
-                
-                # Add a screen shake effect during an earthquake
-                shake_amount = int(5 * (timer / 90))
-                if shake_amount > 0:
-                    screen_offset = (random.randint(-shake_amount, shake_amount),
-                                   random.randint(-shake_amount, shake_amount))
-                    # Note: We'd need to modify the rendering system to truly implement screen shake
-                    # For now, we just indicate it would happen here
-            
-        elif element_type == 'tornado':
-            # Tornado effect (swirling vortex)
-            position = element.get('position', (0, 0))
-            radius = element.get('radius', 120)
-            color = element.get('color', (200, 200, 200))
-            timer = element.get('timer', 0)
-            
-            # Create a surface for the tornado
-            effect_surface = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-            
-            # Calculate alpha based on timer
-            max_time = 180  # The initial timer value
-            alpha_base = int(255 * (timer / max_time))
-            
-            # Draw the tornado as a series of ovals with rotation
-            import random
-            rotation = (pygame.time.get_ticks() / 20) % 360  # Base rotation
-            
-            # Number of ovals in the tornado
-            num_ovals = 12
-            
-            for i in range(num_ovals):
-                # Calculate size of this oval
-                oval_height = radius * 0.8  # Height is consistent
-                oval_width = radius * (0.5 + 0.5 * (i / num_ovals))  # Width increases toward the bottom
-                
-                # Calculate vertical position (ovals stack from bottom to top)
-                y_offset = radius - (radius * 0.8 * (i / num_ovals))
-                
-                # Calculate alpha for this oval (more transparent at the top)
-                oval_alpha = int(alpha_base * (0.4 + 0.6 * (i / num_ovals)))
-                
-                # Calculate rotation for this oval (increases toward the top)
-                oval_rotation = rotation + (i * 30)  # 30 degrees offset per oval
-                
-                # Convert rotation to radians
-                oval_rotation_rad = oval_rotation * math.pi / 180
-                
-                # Calculate center point with a slight wobble
-                wobble = 5 * math.sin(pygame.time.get_ticks() / 100 + i)
-                center_x = radius + wobble
-                center_y = y_offset
-                
-                # Calculate points around the oval
-                num_points = 20
-                points = []
-                
-                for j in range(num_points):
-                    angle = 2 * math.pi * j / num_points
-                    # Oval parametric equation
-                    x = oval_width/2 * math.cos(angle)
-                    y = oval_height/2 * math.sin(angle)
-                    
-                    # Apply rotation
-                    rotated_x = x * math.cos(oval_rotation_rad) - y * math.sin(oval_rotation_rad)
-                    rotated_y = x * math.sin(oval_rotation_rad) + y * math.cos(oval_rotation_rad)
-                    
-                    # Translate to center
-                    points.append((center_x + rotated_x, center_y + rotated_y))
-                
-                # Draw the oval
-                oval_color = (color[0], color[1], color[2], oval_alpha)
-                pygame.draw.polygon(effect_surface, oval_color, points)
-            
-            # Add some swirling debris particles
-            num_particles = 30
-            for _ in range(num_particles):
-                # Random position along the radius
-                dist = random.uniform(0, radius * 0.9)
-                angle = random.uniform(0, 2 * math.pi)
-                
-                # Apply rotation based on current time
-                time_factor = pygame.time.get_ticks() / 1000
-                angle += time_factor * (2 - dist/radius)  # Faster rotation near center
-                
-                # Calculate position
-                particle_x = radius + dist * math.cos(angle)
-                particle_y = radius + dist * math.sin(angle)
-                
-                # Size and color vary based on distance from center
-                particle_size = int(2 + 3 * (dist/radius))
-                particle_alpha = int(alpha_base * (0.5 + 0.5 * (dist/radius)))
-                
-                # Random color variation
-                r_offset = random.randint(-20, 20)
-                g_offset = random.randint(-20, 20)
-                b_offset = random.randint(-20, 20)
-                
-                particle_color = (
-                    max(0, min(255, color[0] + r_offset)),
-                    max(0, min(255, color[1] + g_offset)),
-                    max(0, min(255, color[2] + b_offset)),
-                    particle_alpha
-                )
-                
-                # Draw the particle
-                pygame.draw.circle(effect_surface, particle_color, 
-                                  (int(particle_x), int(particle_y)), 
-                                  particle_size)
-            
-            # Blit the tornado to the screen
-            screen.blit(effect_surface, 
-                       (position[0] - radius, position[1] - radius), 
-                       special_flags=pygame.BLEND_ALPHA_SDL2)
+                pygame.draw.rect(screen, wall_color, pygame.Rect(position[0], position[1], 
+                                                               element['size'][0], element['size'][1]))
 
 def draw_level_text(screen, level):
     """
@@ -1432,3 +697,62 @@ def draw_objective_panel(screen, level):
         complete_font = pygame.font.SysFont(None, 26)
         complete_text = complete_font.render("COMPLETED!", True, (50, 255, 50))
         screen.blit(complete_text, (screen_width - complete_text.get_width() - 20, 15))
+
+def draw_dashed_rect(surface, color, rect, dash_length=10, gap_length=10):
+    """
+    Draw a dashed rectangle on the surface.
+    
+    Args:
+        surface: Pygame surface to draw on
+        color: RGB tuple color for the dashes
+        rect: Pygame Rect object defining the rectangle
+        dash_length: Length of each dash in pixels
+        gap_length: Length of each gap in pixels
+    """
+    # Get the four edges of the rectangle
+    top_edge = [(rect.left, rect.top), (rect.right, rect.top)]
+    right_edge = [(rect.right, rect.top), (rect.right, rect.bottom)]
+    bottom_edge = [(rect.right, rect.bottom), (rect.left, rect.bottom)]
+    left_edge = [(rect.left, rect.bottom), (rect.left, rect.top)]
+    
+    # Draw dashed lines for each edge
+    for edge in [top_edge, right_edge, bottom_edge, left_edge]:
+        draw_dashed_line(surface, color, edge[0], edge[1], dash_length, gap_length)
+
+def draw_dashed_line(surface, color, start_pos, end_pos, dash_length=10, gap_length=10):
+    """
+    Draw a dashed line from start_pos to end_pos.
+    
+    Args:
+        surface: Pygame surface to draw on
+        color: RGB tuple color for the dashes
+        start_pos: Starting position (x, y)
+        end_pos: Ending position (x, y)
+        dash_length: Length of each dash in pixels
+        gap_length: Length of each gap in pixels
+    """
+    # Calculate the total length of the line
+    dx = end_pos[0] - start_pos[0]
+    dy = end_pos[1] - start_pos[1]
+    line_length = max(abs(dx), abs(dy))
+    
+    # Calculate the unit vector
+    if line_length > 0:
+        unit_x = dx / line_length
+        unit_y = dy / line_length
+    else:
+        unit_x, unit_y = 0, 0
+    
+    # Draw the dashed line
+    segment_length = dash_length + gap_length
+    num_segments = int(line_length / segment_length) + 1
+    
+    for i in range(num_segments):
+        # Calculate segment start and end positions
+        segment_start_x = start_pos[0] + unit_x * i * segment_length
+        segment_start_y = start_pos[1] + unit_y * i * segment_length
+        
+        segment_end_x = min(segment_start_x + unit_x * dash_length, end_pos[0]) if dx >= 0 else max(segment_start_x + unit_x * dash_length, end_pos[0])
+        segment_end_y = min(segment_start_y + unit_y * dash_length, end_pos[1]) if dy >= 0 else max(segment_start_y + unit_y * dash_length, end_pos[1])
+        
+        pygame.draw.line(surface, color, (segment_start_x, segment_start_y), (segment_end_x, segment_end_y), 1)

@@ -114,6 +114,9 @@ STATE_PLAYING = 2
 STATE_LEVEL_COMPLETE = 3
 current_state = STATE_MAIN_MENU
 
+# Mouse position for targeting
+mouse_position = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
 # Menu state
 menu_selected_option = 0
 unlock_notification_timer = 0
@@ -131,15 +134,20 @@ try:
     menu_sound = None
 
     # Load sound files if available
-    cast_sound = pygame.mixer.Sound("sounds/cast.wav")
-    spell_sound = pygame.mixer.Sound("sounds/spell.wav")
-    level_complete_sound = pygame.mixer.Sound("sounds/level_complete.wav")
-    basic_spell_sound = pygame.mixer.Sound("sounds/basic_spell.wav")
-    advanced_spell_sound = pygame.mixer.Sound("sounds/advanced_spell.wav")
-    power_spell_sound = pygame.mixer.Sound("sounds/power_spell.wav")
-    menu_sound = pygame.mixer.Sound("sounds/menu.wav")
-except:
-    print("Sound files not found, continuing without sound")
+    cast_sound = pygame.mixer.Sound("src/assets/sounds/cast.wav")
+    spell_sound = pygame.mixer.Sound("src/assets/sounds/spell.wav")
+    level_complete_sound = pygame.mixer.Sound("src/assets/sounds/complete.wav")  # Renamed from level_complete.wav to complete.wav
+    menu_sound = pygame.mixer.Sound("src/assets/sounds/menu.wav")
+    
+    # These sound files don't exist yet, but we'll handle them gracefully
+    try:
+        basic_spell_sound = pygame.mixer.Sound("src/assets/sounds/spell.wav")  # Use spell.wav as a fallback
+        advanced_spell_sound = pygame.mixer.Sound("src/assets/sounds/spell.wav")  # Use spell.wav as a fallback
+        power_spell_sound = pygame.mixer.Sound("src/assets/sounds/spell.wav")  # Use spell.wav as a fallback
+    except Exception as e:
+        print(f"Some spell sound files not found, using defaults: {e}")
+except Exception as e:
+    print(f"Sound files not found, continuing without sound. Error: {e}")
 
 def play_sound(sound):
     """Play a sound effect if available."""
@@ -168,6 +176,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         
+        # Track mouse position for spell targeting
+        if event.type == pygame.MOUSEMOTION:
+            mouse_position = event.pos
+            # Update spell circle target position when playing
+            if current_state == STATE_PLAYING:
+                spell_circle.set_target_position(mouse_position)
+        
         # Handle key presses
         if event.type == pygame.KEYDOWN:
             # Main Menu state
@@ -195,6 +210,10 @@ while running:
                 # Go to next level
                 current_level_index = (current_level_index + 1) % len(levels)
                 current_level = levels[current_level_index]
+                
+                # Reset spell circle to clear any active spells
+                spell_circle = SpellCircle(game_progress)
+                
                 current_state = STATE_LEVEL_TRANSITION
                 play_sound(menu_sound)
             
@@ -415,23 +434,31 @@ while running:
             player3.attune_with(id(player1))
             print("Fire and Earth wizards are attuned!")
         
-        # Keep players within screen bounds
-        player1.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
-        player2.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
-        player3.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
-
-        # Update all game objects
+        # Update all wizards
         player1.update()
         player2.update()
         player3.update()
+        
+        # Check for collisions and revert positions if needed
+        if not is_valid_move(player1, current_level):
+            player1.position = player1.prev_position
+        if not is_valid_move(player2, current_level):
+            player2.position = player2.prev_position
+        if not is_valid_move(player3, current_level):
+            player3.position = player3.prev_position
+        
+        # Keep players within screen boundaries
+        player1.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
+        player2.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
+        player3.keep_in_bounds(SCREEN_WIDTH, SCREEN_HEIGHT)
         
         # Update the spell circle
         spell_result = spell_circle.update()
         
         # If a spell was activated, update the level with the spell effect
         if spell_result:
-            spell_name, spell_power = spell_result
-            print(f"Spell activated: {spell_name} ({spell_power:.1f}% power)")
+            spell_name, spell_power, target_position = spell_result
+            print(f"Spell activated: {spell_name} ({spell_power:.1f}% power) at position {target_position}")
             
             # Play a sound for the spell
             if spell_name in ['Steam', 'Lava', 'Mud']:
@@ -443,8 +470,8 @@ while running:
             elif spell_name in ['Fireball', 'Tidal Wave', 'Earthquake', 'Tornado']:
                 play_sound(power_spell_sound)
             
-            # Update the level with the spell effect
-            if current_level.update(spell_name, spell_power):
+            # Update the level with the spell effect and target position
+            if current_level.update(spell_name, spell_power, target_position):
                 # Level was completed!
                 transition_time = 0
                 current_state = STATE_LEVEL_COMPLETE
@@ -491,6 +518,10 @@ while running:
         
         # Draw any active spell effects
         rendering.draw_spell_effect(screen, spell_circle)
+        
+        # Draw targeting cursor when playing (not in level complete state)
+        if current_state == STATE_PLAYING:
+            rendering.draw_targeting_cursor(screen, mouse_position)
         
         # If level complete, draw a message
         if current_state == STATE_LEVEL_COMPLETE:

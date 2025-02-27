@@ -151,6 +151,9 @@ class Player:
         x, y = self.position
         vx, vy = self.velocity
         
+        # Store original position in case we need to revert
+        self.prev_position = (x, y)
+        
         # Update position
         self.position = (x + vx, y + vy)
         
@@ -341,6 +344,7 @@ class SpellCircle:
         active_spell_power (float): Power level of the active spell (0-100)
         spell_effect_timer (int): Timer for how long a spell effect is shown
         game_progress (GameProgress): Reference to the game progress tracker
+        target_position (tuple): Mouse cursor position for targeted spell casting
     """
     
     def __init__(self, game_progress=None):
@@ -357,6 +361,7 @@ class SpellCircle:
         self.active_spell_power = 0
         self.spell_effect_timer = 0
         self.game_progress = game_progress
+        self.target_position = (400, 300)  # Default to center of screen
         
     def add_element(self, element, charge_level=100, wizard_id=None):
         """
@@ -388,13 +393,22 @@ class SpellCircle:
             
         # Reset the activation timer (2 seconds at 60 FPS = 120 frames)
         self.activation_timer = 120
-    
+        
+    def set_target_position(self, position):
+        """
+        Set the target position for the spell (from mouse cursor).
+        
+        Args:
+            position (tuple): (x, y) coordinates for spell targeting
+        """
+        self.target_position = position
+        
     def update(self):
         """
         Update the spell circle state, checking for spell activation.
         
         Returns:
-            tuple or None: (spell_name, spell_power) if a new spell activates, or None
+            tuple or None: (spell_name, spell_power, target_position) if a new spell activates, or None
         """
         # If a spell is currently active, update its effect timer
         if self.active_spell:
@@ -420,7 +434,7 @@ class SpellCircle:
                         self.spell_effect_timer = 180  # 3 seconds at 60 FPS
                         self.elements = []  # Clear the elements after casting
                         self.element_charges = []  # Clear charges too
-                        return (spell_name, spell_power)
+                        return (spell_name, spell_power, self.target_position)
                     else:
                         # If spell is not unlocked, show a visual cue
                         print(f"Spell {spell_name} is not unlocked yet!")
@@ -689,17 +703,22 @@ class Level:
             
         return False
     
-    def update(self, active_spell, spell_power=100):
+    def update(self, active_spell=None, spell_power=100, target_position=None):
         """
         Update the level state based on elapsed time and player actions.
         
         Args:
             active_spell (str or None): The currently active spell
             spell_power (float): The power level of the active spell (0-100)
+            target_position (tuple): The (x, y) position to target the spell effect
             
         Returns:
             bool: True if level state changed (completed, enemy died, etc.)
         """
+        # Use center of screen if no target position provided
+        if target_position is None:
+            target_position = (400, 300)
+            
         state_changed = False
         
         # Calculate power multiplier (0.5 - 1.5 based on spell power)
@@ -741,41 +760,90 @@ class Level:
                 if active_spell == 'Lava':
                     # Lava damages enemies (base damage scaled by power)
                     damage = 2 * power_multiplier
+                    # Get the spell's area of effect radius based on power
+                    aoe_radius = 100 * power_multiplier
+                    
                     for elem in self.elements:
                         if elem['type'] == 'enemy':
-                            elem['health'] -= damage
-                            if elem['health'] <= 0:
-                                self.elements.remove(elem)
-                                state_changed = True
+                            # Calculate distance from spell target to enemy
+                            enemy_x, enemy_y = elem['position']
+                            import math
+                            distance = math.sqrt((enemy_x - target_position[0])**2 + (enemy_y - target_position[1])**2)
+                            
+                            # Only affect enemies within the area of effect
+                            if distance <= aoe_radius:
+                                # Apply damage with distance falloff (more damage closer to center)
+                                falloff = 1 - (distance / aoe_radius)
+                                actual_damage = damage * falloff
+                                elem['health'] -= actual_damage
+                                if elem['health'] <= 0:
+                                    self.elements.remove(elem)
+                                    state_changed = True
                 
                 elif active_spell == 'Steam':
                     # Steam slows enemies (slow effect scaled by power)
                     slow_factor = 0.4 * power_multiplier
+                    # Get the spell's area of effect radius
+                    aoe_radius = 120 * power_multiplier
+                    
                     for elem in self.elements:
                         if elem['type'] == 'enemy':
-                            elem['speed'] = max(0.2, elem['speed'] - slow_factor)
+                            # Calculate distance from spell target to enemy
+                            enemy_x, enemy_y = elem['position']
+                            import math
+                            distance = math.sqrt((enemy_x - target_position[0])**2 + (enemy_y - target_position[1])**2)
+                            
+                            # Only affect enemies within the area of effect
+                            if distance <= aoe_radius:
+                                # Apply slow effect with distance falloff
+                                falloff = 1 - (distance / aoe_radius)
+                                elem['speed'] = max(0.2, elem['speed'] - (slow_factor * falloff))
                 
                 elif active_spell == 'Mud':
                     # Mud slows and damages enemies
                     damage = 1 * power_multiplier
                     slow_factor = 0.3 * power_multiplier
+                    # Get the spell's area of effect radius
+                    aoe_radius = 110 * power_multiplier
+                    
                     for elem in self.elements:
                         if elem['type'] == 'enemy':
-                            elem['health'] -= damage
-                            elem['speed'] = max(0.1, elem['speed'] - slow_factor)
-                            if elem['health'] <= 0:
-                                self.elements.remove(elem)
-                                state_changed = True
+                            # Calculate distance from spell target to enemy
+                            enemy_x, enemy_y = elem['position']
+                            import math
+                            distance = math.sqrt((enemy_x - target_position[0])**2 + (enemy_y - target_position[1])**2)
+                            
+                            # Only affect enemies within the area of effect
+                            if distance <= aoe_radius:
+                                # Apply effects with distance falloff
+                                falloff = 1 - (distance / aoe_radius)
+                                elem['health'] -= damage * falloff
+                                elem['speed'] = max(0.1, elem['speed'] - (slow_factor * falloff))
+                                if elem['health'] <= 0:
+                                    self.elements.remove(elem)
+                                    state_changed = True
                 
                 elif active_spell == 'Storm':
                     # Storm damages all enemies at once (powerful combo spell)
                     damage = 5 * power_multiplier
+                    # Larger area of effect for this powerful spell
+                    aoe_radius = 200 * power_multiplier
+                    
                     enemies_to_remove = []
                     for i, elem in enumerate(self.elements):
                         if elem['type'] == 'enemy':
-                            elem['health'] -= damage
-                            if elem['health'] <= 0:
-                                enemies_to_remove.append(i)
+                            # Calculate distance from spell target to enemy
+                            enemy_x, enemy_y = elem['position']
+                            import math
+                            distance = math.sqrt((enemy_x - target_position[0])**2 + (enemy_y - target_position[1])**2)
+                            
+                            # Only affect enemies within the area of effect
+                            if distance <= aoe_radius:
+                                # Apply damage with distance falloff
+                                falloff = 1 - (distance / aoe_radius)
+                                elem['health'] -= damage * falloff
+                                if elem['health'] <= 0:
+                                    enemies_to_remove.append(i)
                     
                     # Remove dead enemies (in reverse order to avoid index issues)
                     for i in sorted(enemies_to_remove, reverse=True):
@@ -784,43 +852,39 @@ class Level:
 
                 # Implement teleport spell effect
                 elif active_spell == 'Teleport':
-                    # Teleport moves all players to the center of the screen
+                    # Teleport moves all players to the target position
                     if self.players:  # Make sure we have players
-                        # Center of the screen
-                        center_x, center_y = 400, 300
-                        # Spread the players around the center
+                        # Spread the players around the target point
                         angles = [0, 120, 240]  # Spread players evenly
-                        distance = 80 * power_multiplier  # Distance from center, scales with power
+                        distance = 40 * power_multiplier  # Distance from target, scales with power
                         
                         for i, player in enumerate(self.players):
                             if i < len(angles):
                                 angle_rad = angles[i] * 3.14159 / 180
                                 import math
-                                new_x = center_x + distance * math.cos(angle_rad)
-                                new_y = center_y + distance * math.sin(angle_rad)
-                                player.position = (new_x, new_y)
-                                print(f"Teleported {player.element} Wizard to ({new_x:.1f}, {new_y:.1f})")
+                                new_x = target_position[0] + distance * math.cos(angle_rad)
+                                new_y = target_position[1] + distance * math.sin(angle_rad)
+                                # Make sure the position is valid
+                                if not self.is_position_blocked((new_x, new_y), player.size):
+                                    player.position = (new_x, new_y)
+                                    print(f"Teleported {player.element} Wizard to ({new_x:.1f}, {new_y:.1f})")
                         state_changed = True
 
                 # Implement barrier spell effect
                 elif active_spell == 'Barrier':
-                    # Create a barrier around all players
-                    if self.players:  # Make sure we have players
-                        # Create a barrier wall for each player
-                        for player in self.players:
-                            x, y = player.position
-                            barrier_size = int(30 + (20 * power_multiplier))  # Size scales with power
-                            
-                            # Create a barrier element
-                            self.elements.append({
-                                'type': 'wall',
-                                'position': (x - barrier_size/2, y - barrier_size/2),
-                                'size': (barrier_size, barrier_size),
-                                'temp': True,  # This is a temporary wall
-                                'timer': int(300 * power_multiplier)  # 5 seconds * power multiplier
-                            })
-                            print(f"Created barrier around {player.element} Wizard")
-                        state_changed = True
+                    # Create a barrier wall at the target position
+                    barrier_size = int(60 + (40 * power_multiplier))  # Size scales with power
+                    
+                    # Create a barrier element
+                    self.elements.append({
+                        'type': 'wall',
+                        'position': (target_position[0] - barrier_size/2, target_position[1] - barrier_size/2),
+                        'size': (barrier_size, barrier_size),
+                        'temp': True,  # This is a temporary wall
+                        'timer': int(300 * power_multiplier)  # 5 seconds * power multiplier
+                    })
+                    print(f"Created barrier at ({target_position[0]}, {target_position[1]})")
+                    state_changed = True
                 
                 # Implementation for multi-cast spells
                 elif active_spell == 'Fireball':
@@ -828,43 +892,38 @@ class Level:
                     damage = 10 * power_multiplier  # High base damage
                     radius = 150 * power_multiplier  # Large area of effect
                     
-                    if self.players:
-                        # Get the position of the Fire wizard to launch from
-                        fire_wizard = next((p for p in self.players if p.element == 'Fire'), self.players[0])
-                        center_x, center_y = fire_wizard.position
-                        
-                        enemies_to_remove = []
-                        for i, elem in enumerate(self.elements):
-                            if elem['type'] == 'enemy':
-                                # Calculate distance from fireball center
-                                enemy_x, enemy_y = elem['position']
-                                import math
-                                distance = math.sqrt((enemy_x - center_x)**2 + (enemy_y - center_y)**2)
+                    enemies_to_remove = []
+                    for i, elem in enumerate(self.elements):
+                        if elem['type'] == 'enemy':
+                            # Calculate distance from fireball center
+                            enemy_x, enemy_y = elem['position']
+                            import math
+                            distance = math.sqrt((enemy_x - target_position[0])**2 + (enemy_y - target_position[1])**2)
+                            
+                            # If within radius, apply damage (more damage closer to center)
+                            if distance <= radius:
+                                # Damage falls off with distance
+                                distance_factor = 1 - (distance / radius)
+                                actual_damage = damage * distance_factor
+                                elem['health'] -= actual_damage
                                 
-                                # If within radius, apply damage (more damage closer to center)
-                                if distance <= radius:
-                                    # Damage falls off with distance
-                                    distance_factor = 1 - (distance / radius)
-                                    actual_damage = damage * distance_factor
-                                    elem['health'] -= actual_damage
-                                    
-                                    if elem['health'] <= 0:
-                                        enemies_to_remove.append(i)
-                        
-                        # Remove dead enemies
-                        for i in sorted(enemies_to_remove, reverse=True):
-                            self.elements.pop(i)
-                            state_changed = True
-                        
-                        # Add a visual effect element
-                        self.elements.append({
-                            'type': 'effect',
-                            'effect_type': 'explosion',
-                            'position': (center_x, center_y),
-                            'radius': radius,
-                            'timer': 60,  # 1 second
-                            'color': (255, 100, 0)  # Orange-red
-                        })
+                                if elem['health'] <= 0:
+                                    enemies_to_remove.append(i)
+                    
+                    # Remove dead enemies
+                    for i in sorted(enemies_to_remove, reverse=True):
+                        self.elements.pop(i)
+                        state_changed = True
+                    
+                    # Add a visual effect element
+                    self.elements.append({
+                        'type': 'effect',
+                        'effect_type': 'explosion',
+                        'position': target_position,
+                        'radius': radius,
+                        'timer': 60,  # 1 second
+                        'color': (255, 100, 0)  # Orange-red
+                    })
                 
                 elif active_spell == 'Tidal Wave':
                     # Tidal Wave: Pushes enemies away and damages them
