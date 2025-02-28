@@ -148,7 +148,10 @@ This roadmap builds on the existing MVP in `src/game.py`, `src/main.py`, and `sr
 ### Phase 5: Polish and Bug Fixing
 - **Goal**: Refine gameplay and fix issues.
 - **Tasks**:
-  - **Bug Fixes**: Address movement glitches, spell misfires, or UI overlaps. TODO
+  - **Bug Fixes**: Address movement glitches, spell misfires, or UI overlaps. IN PROGRESS
+    - Fix sound loading path issues COMPLETED ✓
+    - Fix wall collision detection COMPLETED ✓
+    - Fix spell effects persisting between levels COMPLETED ✓
   - **Balance**: Adjust charge times (e.g., 1.5-2 seconds optimal), movement speed, and enemy difficulty. TODO
   - **Enhanced Cooperative Spellcasting System**: Implement expanded mechanics for deeper teamwork. COMPLETED ✓ 
     - **Tertiary Elements**: Allow each wizard to cast a third element (Fire→Water, Water→Earth, Earth→Fire) COMPLETED ✓
@@ -160,6 +163,30 @@ This roadmap builds on the existing MVP in `src/game.py`, `src/main.py`, and `sr
   - **Tutorial**: Add a first level explaining mechanics (e.g., "Hold 1 to charge Fire"). TODO
   - **Test**: Playtest with 1-3 players to ensure flow and fun. TODO
 - **Duration**: 4-6 days. IN PROGRESS
+
+### Phase 6: Enhanced Gameplay Features
+- **Goal**: Add depth and quality-of-life improvements to take the game to the next level.
+- **Tasks**:
+  - **Targeted Spell Casting** (`game.py` & `main.py`): IN PROGRESS
+    - Implement mouse cursor targeting for spell effects instead of global screen effects MOSTLY COMPLETED ✓
+    - Add different sized hitboxes for different spells (stronger spells have larger areas of effect)
+    - Create visual indicators showing spell targeting and range
+    - Allow targeting teleport destinations and barrier placements
+  - **Larger Game Screen** (`main.py`): TODO
+    - Increase screen resolution from 800x600 to 1024x768 or larger
+    - Adjust UI elements to prevent overlapping or cramped displays
+    - Rebalance game object sizes and speeds for the larger play area
+  - **Level Generation System** (`game.py`): TODO
+    - Create a standardized, data-driven system for defining levels
+    - Build a level editor or structured format (JSON/YAML) for easy level creation
+    - Add support for different terrain types, environmental hazards, and interactive objects
+    - Implement a system to load levels from external files
+  - **Camera System** (`rendering.py`): TODO
+    - Implement a camera that can move beyond the static screen
+    - Create a dynamic zoom system that adjusts based on player spread
+    - Add smooth transitions between camera movements
+    - Implement mini-map or indicators for off-screen players
+- **Duration**: 7-10 days. PLANNED
 
 ---
 
@@ -225,6 +252,7 @@ Start with **Phase 1** to overhaul the casting mechanic, as it's the core of the
 - Phase 2: Add Wizard Movement - COMPLETED ✓
 - Phase 3: Redesign UI - COMPLETED ✓
 - Phase 4: Expand Spell Variety - COMPLETED ✓
-- Phase 5: Polish and Bug Fixing - TODO
+- Phase 5: Polish and Bug Fixing - IN PROGRESS
+- Phase 6: Enhanced Gameplay Features - PLANNED
 
 ---
